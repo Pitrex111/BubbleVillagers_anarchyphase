@@ -1,0 +1,77 @@
+name: BubbleVillagers
+version: '${project.version}'
+main: me.xginko.villageroptimizer.VillagerOptimizer
+authors: [ Ξthan, xGinko ]
+description: Combat heavy villager lag by letting players optimize their trading halls with advanced controls.
+website: https://github.com/xGinko/VillagerOptimizer
+api-version: '1.21'
+provides:
+  - VillagerOptimizer
+softdepend:
+  - AntiVillagerLag
+folia-supported: true
+
+commands:
+  villageroptimizer:
+    usage: /villageroptimizer [reload|version|disable]
+    description: BubbleVillagers admin commands
+    permission: bubblevillagers.admin
+    permission-message: You don't have permission to use this command.
+    aliases:
+      - voptimizer
+      - vo
+      - bubblevillagers
+      - bv
+  optimizevillagers:
+    usage: /optimizevillagers <blockradius>
+    description: Optimize villagers in a radius around you
+    permission: bubblevillagers.optimize
+    permission-message: You don't have permission to use this command.
+    aliases:
+      - optvils
+      - noai
+      - bubbleoptimize
+      - bvopt
+  unoptimizevillagers:
+    usage: /unoptimizevillagers <blockradius>
+    description: Unoptimize villagers in a radius around you
+    permission: bubblevillagers.unoptimize
+    permission-message: You don't have permission to use this command.
+    aliases:
+      - unoptvils
+      - noaiundo
+      - bubbleunoptimize
+      - bvunopt
+
+permissions:
+  bubblevillagers.*:
+    description: Access to all BubbleVillagers features
+    default: op
+    children:
+      bubblevillagers.admin: true
+      bubblevillagers.optimize: true
+      bubblevillagers.unoptimize: true
+  bubblevillagers.admin:
+    description: Access to admin commands (reload, version, disable)
+    default: op
+    children:
+      villageroptimizer.admin: true
+  villageroptimizer.admin:
+    description: Legacy permission node for admin commands
+    default: op
+  bubblevillagers.optimize:
+    description: Allow running /optimizevillagers command
+    default: op
+    children:
+      villageroptimizer.optimize: true
+  villageroptimizer.optimize:
+    description: Legacy permission node to optimize villagers in a radius
+    default: op
+  bubblevillagers.unoptimize:
+    description: Allow running /unoptimizevillagers command
+    default: op
+    children:
+      villageroptimizer.unoptimize: true
+  villageroptimizer.unoptimize:
+    description: Legacy permission node to unoptimize villagers in a radius
+    default: op

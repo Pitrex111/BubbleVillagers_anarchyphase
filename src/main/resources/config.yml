@@ -1,0 +1,126 @@
+# BubbleVillagers Configuration
+# https://github.com/xGinko/VillagerOptimizer
+
+# Plugin Language
+# Available: en_us, de_de, it_it, ko_kr, ru_ru, zh_cn
+language: en_us
+
+# Performance Settings
+optimization:
+  # Remove AI from optimized villagers (reduces lag significantly)
+  remove-ai: true
+  
+  # Allow optimized villagers to restock their trades
+  allow-restocking: true
+  
+  # Restock interval in ticks (20 ticks = 1 second)
+  # Default: 1200 ticks = 60 seconds = 1 minute
+  restock-interval: 1200
+  
+  # Allow optimized villagers to level up their profession
+  allow-leveling: true
+
+# Cooldown Settings (in seconds)
+cooldowns:
+  # Cooldown between optimizing the same villager
+  optimization-cooldown: 300
+  
+  # Cooldown between using optimization commands
+  command-cooldown: 30
+
+# Optimization Methods
+methods:
+  # Nametag Optimization
+  nametag:
+    enabled: true
+    # Text required on nametag to optimize/unoptimize
+    required-name: "Optimize"
+    # Consume nametag when used
+    consume-nametag: false
+  
+  # Block Interaction Optimization
+  block:
+    enabled: true
+    # Blocks that can be used to optimize villagers
+    allowed-blocks:
+      - GOLD_NUGGET
+      - EMERALD
+    # Consume block when used
+    consume-block: false
+  
+  # Workstation Optimization
+  workstation:
+    enabled: true
+    # Auto-optimize when villager claims workstation
+    auto-optimize-on-claim: false
+
+# Command Settings
+commands:
+  # Maximum radius for /optimizevillagers and /unoptimizevillagers
+  max-radius: 100
+  
+  # Maximum villagers a single player can optimize
+  # Set to -1 for unlimited
+  villagers-per-player: 50
+
+# Messages and Notifications
+notifications:
+  # Show messages when optimizing/unoptimizing
+  show-messages: true
+  
+  # Send action bar messages
+  use-action-bar: true
+  
+  # Play sounds when optimizing
+  play-sounds: true
+  
+  # Sound to play on successful optimization
+  success-sound: ENTITY_EXPERIENCE_ORB_PICKUP
+  
+  # Sound to play on failure
+  fail-sound: ENTITY_VILLAGER_NO
+
+# Performance Options
+performance:
+  # Check for updates on startup
+  check-updates: true
+  
+  # Send anonymous statistics to bStats
+  # Help us improve by keeping this enabled!
+  enable-metrics: true
+  
+  # Debug mode (prints extra information to console)
+  debug: false
+
+# Advanced Settings
+advanced:
+  # Save optimized villagers to database
+  save-to-database: true
+  
+  # Database save interval in ticks
+  save-interval: 6000
+  
+  # Prevent optimized villagers from despawning
+  prevent-despawn: true
+  
+  # Protection from other plugins
+  protect-from-removal: true
+
+# Integration Settings
+integrations:
+  # WorldGuard integration
+  worldguard:
+    enabled: true
+    # Only allow optimization in specific regions
+    allowed-regions: []
+  
+  # Vault integration for economy
+  vault:
+    enabled: false
+    # Cost to optimize a villager
+    optimize-cost: 0.0
+    # Cost to unoptimize a villager
+    unoptimize-cost: 0.0
+
+# DO NOT CHANGE - Configuration version
+config-version: 2

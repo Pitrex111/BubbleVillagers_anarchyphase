@@ -1,0 +1,70 @@
+name: BubbleVillagers
+version: '1.6.2-bubble'
+main: me.xginko.villageroptimizer.VillagerOptimizer
+authors: [ Ξthan, xGinko ]
+description: Villager optimser.
+website: https://github.com/xGinko/VillagerOptimizer
+api-version: '1.21'
+provides:
+  - VillagerOptimizer
+softdepend:
+  - AntiVillagerLag
+folia-supported: true
+
+commands:
+  villageroptimizer:
+    usage: /villageroptimizer [ reload, version, disable ]
+    description: VillagerOptimizer admin commands
+    permission: bubblevillagers.admin
+    permission-message: You don't have permission to use this command.
+    aliases:
+      - voptimizer
+      - vo
+      - bubblevillagers
+      - bv
+  optimizevillagers:
+    usage: /optimizevillagers <blockradius>
+    description: Optimize villagers in a radius around you
+    permission: bubblevillagers.optimize
+    permission-message: You don't have permission to use this command.
+    aliases:
+      - optvils
+      - noai
+      - bubbleoptimize
+      - bvopt
+  unoptimizevillagers:
+    usage: /unoptimizevillagers <blockradius>
+    description: Unoptimize villagers in a radius around you
+    permission: bubblevillagers.unoptimize
+    permission-message: You don't have permission to use this command.
+    aliases:
+      - unoptvils
+      - noaiundo
+      - bubbleunoptimize
+      - bvunopt
+
+permissions:
+  bubblevillagers.admin:
+    description: Access to /villageroptimizer admin commands (reload, version, disable)
+    default: op
+    children:
+      villageroptimizer.admin: true
+  villageroptimizer.admin:
+    description: Legacy node for admin commands
+    default: op
+  bubblevillagers.optimize:
+    description: Allow running /optimizevillagers
+    default: op
+    children:
+      villageroptimizer.optimize: true
+  villageroptimizer.optimize:
+    description: Legacy node to optimize villagers in a radius
+    default: op
+  bubblevillagers.unoptimize:
+    description: Allow running /unoptimizevillagers
+    default: op
+    children:
+      villageroptimizer.unoptimize: true
+  villageroptimizer.unoptimize:
+    description: Legacy node to unoptimize villagers in a radius
+    default: op

@@ -1,0 +1,96 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+        
+    - name: Build with Maven
+      run: mvn clean package
+      
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: BubbleVillagers
+        path: target/BubbleVillagers-*.jar
+        
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+        
+    - name: Build with Maven
+      run: mvn clean package
+      
+    - name: Get version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: target/BubbleVillagers-*.jar
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Publish to Modrinth
+      if: env.MODRINTH_TOKEN != ''
+      uses: Kir-Antipov/mc-publish@v3.3
+      with:
+        modrinth-id: YOUR_MODRINTH_PROJECT_ID
+        modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+        files: target/BubbleVillagers-*.jar
+        name: BubbleVillagers ${{ steps.version.outputs.VERSION }}
+        version: ${{ steps.version.outputs.VERSION }}
+        version-type: release
+        loaders: |
+          paper
+          folia
+          spigot
+          purpur
+        game-versions: |
+          1.21.4
+          1.21.3
+          1.21.2
+          1.21.1
+          1.21
+          1.20.6
+          1.20.5
+          1.20.4
+        dependencies: |
+          paper(required){modrinth:P7dR8mSH}
+        changelog-file: CHANGELOG.md
+      env:
+        MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
