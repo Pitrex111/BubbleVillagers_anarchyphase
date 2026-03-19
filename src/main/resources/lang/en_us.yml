@@ -13,6 +13,13 @@ messages:
       - "<gray>You need to wait %time% until you can optimize this villager again."
     unoptimize-success:
       - "<green>Successfully unoptimized villager by using a nametag."
+  shift-right-click:
+    optimize-success:
+      - "<green>Successfully optimized villager."
+    optimize-on-cooldown:
+      - "<gray>You need to wait %time% until you can optimize this villager again."
+    unoptimize-success:
+      - "<green>Successfully unoptimized villager."
   block:
     optimize-success:
       - "<green>%vil_profession% villager successfully optimized using block %blocktype%."

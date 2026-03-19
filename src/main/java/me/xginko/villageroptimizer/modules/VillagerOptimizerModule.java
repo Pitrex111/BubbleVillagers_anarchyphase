@@ -1,14 +1,17 @@
 package me.xginko.villageroptimizer.modules;
 
 import com.github.benmanes.caffeine.cache.Cache;
+
 import me.xginko.villageroptimizer.VillagerOptimizer;
 import me.xginko.villageroptimizer.config.Config;
 import me.xginko.villageroptimizer.struct.Disableable;
 import me.xginko.villageroptimizer.struct.Enableable;
 import me.xginko.villageroptimizer.wrapper.WrappedVillager;
+
 import org.bukkit.entity.Villager;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
+
 import space.arim.morepaperlib.scheduling.GracefulScheduling;
 
 import java.lang.reflect.InvocationTargetException;
@@ -16,9 +19,16 @@ import java.lang.reflect.Modifier;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.gmail.pitrex111.OptimizeByShiftRightClick;
+
 public abstract class VillagerOptimizerModule implements Enableable, Disableable {
 
-    private static final Reflections MODULES_PACKAGE = new Reflections(VillagerOptimizerModule.class.getPackage().getName());
+    private static final Reflections MODULES_PACKAGE[] = 
+    {
+        new Reflections(VillagerOptimizerModule.class.getPackage().getName()),
+        new Reflections(OptimizeByShiftRightClick.class.getPackage().getName()),
+    };
+
     public static final Set<VillagerOptimizerModule> ENABLED_MODULES = new HashSet<>();
 
     public abstract boolean shouldEnable();
@@ -49,7 +59,16 @@ public abstract class VillagerOptimizerModule implements Enableable, Disableable
         ENABLED_MODULES.forEach(VillagerOptimizerModule::disable);
         ENABLED_MODULES.clear();
 
-        for (Class<?> clazz : MODULES_PACKAGE.get(Scanners.SubTypes.of(VillagerOptimizerModule.class).asClass())) {
+        for (Reflections packageName : MODULES_PACKAGE)
+        {
+            reloadForPackage(packageName);
+        }
+
+        ENABLED_MODULES.forEach(VillagerOptimizerModule::enable);
+    }
+
+    private static void reloadForPackage(Reflections packageName){
+        for (Class<?> clazz : packageName.get(Scanners.SubTypes.of(VillagerOptimizerModule.class).asClass())) {
             if (clazz.isInterface() || Modifier.isAbstract(clazz.getModifiers())) continue;
 
             try {
@@ -61,8 +80,6 @@ public abstract class VillagerOptimizerModule implements Enableable, Disableable
                 VillagerOptimizer.logger().error("Failed initialising module class '{}'.", clazz.getSimpleName(), e);
             }
         }
-
-        ENABLED_MODULES.forEach(VillagerOptimizerModule::enable);
     }
 
     protected void error(String message, Throwable throwable) {

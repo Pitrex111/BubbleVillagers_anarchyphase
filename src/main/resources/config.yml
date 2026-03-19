@@ -37,6 +37,10 @@ methods:
     required-name: "Optimize"
     # Consume nametag when used
     consume-nametag: false
+
+  # Shift + Right Click Optimization
+  shift-right-click:
+    enabled: true
   
   # Block Interaction Optimization
   block:

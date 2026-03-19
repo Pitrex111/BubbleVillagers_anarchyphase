@@ -13,6 +13,8 @@ public final class Permissions {
                 "Permission to bypass restock cooldown on optimized villagers", PermissionDefault.FALSE)),
         NAMETAG_COOLDOWN(new Permission("villageroptimizer.bypass.nametagcooldown",
                 "Permission to bypass Nametag optimization cooldown", PermissionDefault.FALSE)),
+        SHIFT_RIGHT_CLICK_COOLDOWN(new Permission("villageroptimizer.bypass.shiftrightclickcooldown",
+                "Permission to bypass Nametag optimization cooldown", PermissionDefault.FALSE)),
         BLOCK_COOLDOWN(new Permission("villageroptimizer.bypass.blockcooldown",
                 "Permission to bypass Block optimization cooldown", PermissionDefault.FALSE)),
         WORKSTATION_COOLDOWN(new Permission("villageroptimizer.bypass.workstationcooldown",
@@ -60,6 +62,8 @@ public final class Permissions {
 
     public enum Optimize {
         NAMETAG(new Permission("villageroptimizer.optimize.nametag",
+                "Permission to optimize / unoptimize using Nametags", PermissionDefault.TRUE)),
+        SHIFT_RIGHT_CLICK(new Permission("villageroptimizer.optimize.shiftrightclick",
                 "Permission to optimize / unoptimize using Nametags", PermissionDefault.TRUE)),
         BLOCK(new Permission("villageroptimizer.optimize.block",
                 "Permission to optimize / unoptimize using Blocks", PermissionDefault.TRUE)),

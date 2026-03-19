@@ -118,7 +118,7 @@ public class VillagerOptimizer extends JavaPlugin {
         logger.info(Component.text("│        / /_/ // _ \\/ __// //  ' \\ / //_ // -_)/ __/        │").style(Util.PL_STYLE));
         logger.info(Component.text("│        \\____// .__/\\__//_//_/_/_//_/ /__/\\__//_/           │").style(Util.PL_STYLE));
         logger.info(Component.text("│             /_/         by xGinko                          │").style(Util.PL_STYLE));
-        logger.info(Component.text("│                                                            │").style(Util.PL_STYLE));
+        logger.info(Component.text("│                    modified by Pitrex                      │").style(Util.PL_STYLE));
         logger.info(Component.text("│                                                            │").style(Util.PL_STYLE));
         logger.info(Component.text("│        ")
                 .style(Util.PL_STYLE).append(Component.text("https://github.com/xGinko/VillagerOptimizer")

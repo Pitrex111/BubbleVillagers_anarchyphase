@@ -5,6 +5,7 @@ public enum OptimizationType {
     REGIONAL_ACTIVITY,
     COMMAND,
     NAMETAG,
+    SHIFT_RIGHT_CLICK,
     WORKSTATION,
     BLOCK,
     NONE

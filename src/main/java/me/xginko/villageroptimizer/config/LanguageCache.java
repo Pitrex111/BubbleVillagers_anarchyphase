@@ -1,17 +1,18 @@
 package me.xginko.villageroptimizer.config;
 
-import me.xginko.villageroptimizer.VillagerOptimizer;
-import me.xginko.villageroptimizer.utils.KyoriUtil;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.jetbrains.annotations.NotNull;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.jetbrains.annotations.NotNull;
+
+import me.xginko.villageroptimizer.VillagerOptimizer;
+import me.xginko.villageroptimizer.utils.KyoriUtil;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 
 public class LanguageCache {
 
@@ -20,6 +21,7 @@ public class LanguageCache {
 
     public final @NotNull Component no_permission;
     public final @NotNull List<Component> nametag_optimize_success, nametag_on_optimize_cooldown, nametag_unoptimize_success,
+            shift_right_click_optimize_success, shift_right_click_on_optimize_cooldown, shift_right_click_unoptimize_success,
             block_optimize_success, block_on_optimize_cooldown, block_unoptimize_success,
             workstation_optimize_success, workstation_on_optimize_cooldown, workstation_unoptimize_success,
             activity_optimize_success,
@@ -56,6 +58,13 @@ public class LanguageCache {
                 "<gray>You need to wait %time% until you can optimize this villager again.");
         this.nametag_unoptimize_success = getListTranslation("messages.nametag.unoptimize-success",
                 "<green>Successfully unoptimized villager by using a nametag.");
+        // Shift + Right Click
+        this.shift_right_click_optimize_success = getListTranslation("messages.shift-right-click.optimize-success",
+                "<green>Successfully optimized a villager.");
+        this.shift_right_click_on_optimize_cooldown = getListTranslation("messages.shift-right-click.optimize-on-cooldown",
+                "<gray>You need to wait %time% until you can optimize this villager again.");
+        this.shift_right_click_unoptimize_success = getListTranslation("messages.shift-right-click.unoptimize-success",
+                "<green>Successfully unoptimized a villager.");
         // Block
         this.block_optimize_success = getListTranslation("messages.block.optimize-success",
                 "<green>%villagertype% villager successfully optimized using block %blocktype%.");
