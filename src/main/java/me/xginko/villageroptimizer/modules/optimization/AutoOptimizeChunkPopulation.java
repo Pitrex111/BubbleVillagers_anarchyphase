@@ -48,10 +48,10 @@ public class AutoOptimizeChunkPopulation extends VillagerOptimizerModule impleme
         }
     }
 
-    @Override
-    public boolean shouldEnable() {
-        return config.getBoolean(configPath + ".enable", false);
-    }
+	@Override
+	public boolean shouldEnable() {
+		return false;
+	}
 
     @Override
     public void run() {

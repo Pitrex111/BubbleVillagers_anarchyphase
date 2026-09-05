@@ -37,10 +37,10 @@ public class EnableLeashingVillagers extends VillagerOptimizerModule implements 
         HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public boolean shouldEnable() {
-        return config.getBoolean(configPath + ".enable", false);
-    }
+	@Override
+	public boolean shouldEnable() {
+		return false;
+	}
 
     @SuppressWarnings("deprecation")
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

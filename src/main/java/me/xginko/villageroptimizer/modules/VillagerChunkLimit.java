@@ -123,10 +123,10 @@ public class VillagerChunkLimit extends VillagerOptimizerModule implements Runna
         periodic_chunk_check = scheduling.globalRegionalScheduler().runAtFixedRate(this, check_period, check_period);
     }
 
-    @Override
-    public boolean shouldEnable() {
-        return config.getBoolean(configPath + ".enable", false);
-    }
+	@Override
+	public boolean shouldEnable() {
+		return false;
+	}
 
     @Override
     public void disable() {

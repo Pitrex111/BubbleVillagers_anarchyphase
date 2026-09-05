@@ -25,10 +25,10 @@ public class MakeVillagersSpawnAdult extends VillagerOptimizerModule implements 
         HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public boolean shouldEnable() {
-        return config.getBoolean(configPath + ".enable", false);
-    }
+	@Override
+	public boolean shouldEnable() {
+		return false;
+	}
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     private void onVillagerSpawn(CreatureSpawnEvent event) {

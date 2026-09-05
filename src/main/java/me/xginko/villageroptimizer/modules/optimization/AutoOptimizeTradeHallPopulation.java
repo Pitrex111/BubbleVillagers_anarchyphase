@@ -54,10 +54,10 @@ public class AutoOptimizeTradeHallPopulation extends VillagerOptimizerModule imp
         }
     }
 
-    @Override
-    public boolean shouldEnable() {
-        return config.getBoolean(configPath + ".enable", false);
-    }
+	@Override
+	public boolean shouldEnable() {
+		return false;
+	}
 
     @Override
     public void run() {

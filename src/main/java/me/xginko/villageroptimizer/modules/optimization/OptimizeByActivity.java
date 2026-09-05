@@ -77,10 +77,10 @@ public class OptimizeByActivity extends VillagerOptimizerModule implements Liste
         HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public boolean shouldEnable() {
-        return config.getBoolean(configPath + ".enable", false);
-    }
+	@Override
+	public boolean shouldEnable() {
+		return false;
+	}
 
     private @NotNull RegionData getRegionData(Location location) {
         return regionDataCache.get(getRegion(location), RegionData::new);

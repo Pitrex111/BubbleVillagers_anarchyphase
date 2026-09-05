@@ -7,186 +7,197 @@ import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Villager;
 import org.bukkit.entity.memory.MemoryKey;
-import org.bukkit.event.entity.VillagerReplenishTradeEvent;
-import org.bukkit.inventory.MerchantRecipe;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class WrappedVillager extends PDCWrapper {
 
-    private final @NotNull PDCWrapper[] pdcWrappers;
+	/*
+	 * IMPORTANT:
+	 *
+	 * BubbleVillagers' own persistent data is the authoritative state.
+	 *
+	 * Previous versions attempted to mix BubbleVillagers and
+	 * AntiVillagerLag PDC state. For this server fork we intentionally do
+	 * not allow another plugin's PDC markers to control BubbleVillagers.
+	 *
+	 * Existing BubbleVillagers villagers remain fully compatible because
+	 * PDCWrapperVO uses the exact same namespace and keys as before.
+	 */
+	private final @NotNull PDCWrapperVO bubbleData;
 
-    public WrappedVillager(@NotNull Villager villager) {
-        super(villager);
-        this.pdcWrappers = PDCWrapper.forVillager(villager);
-    }
+	public WrappedVillager(@NotNull Villager villager) {
+		super(villager);
+		this.bubbleData = new PDCWrapperVO(villager);
+	}
 
-    /**
-     * Returns a number between 0 and 24000
-     * is affected by /time set
-     */
-    public long currentDayTimeTicks() {
-        return villager.getWorld().getTime();
-    }
+	/**
+	 * Returns a number between 0 and 23999.
+	 * Affected by /time set.
+	 */
+	public long currentDayTimeTicks() {
+		return villager.getWorld().getTime();
+	}
 
-    /**
-     * Returns the tick time of the world
-     * is affected by /time set
-     */
-    public long currentFullTimeTicks() {
-        return villager.getWorld().getFullTime();
-    }
+	/**
+	 * Returns the world's full accumulated time.
+	 */
+	public long currentFullTimeTicks() {
+		return villager.getWorld().getFullTime();
+	}
 
-    /**
-     * Restock all trading recipes.
-     */
-    public void restock() {
-        VillagerOptimizer.scheduling().entitySpecificScheduler(villager).run(() -> {
-            for (MerchantRecipe merchantRecipe : villager.getRecipes()) {
-                VillagerReplenishTradeEvent restockRecipeEvent = new VillagerReplenishTradeEvent(villager, merchantRecipe);
-                if (restockRecipeEvent.callEvent()) {
-                    restockRecipeEvent.getRecipe().setUses(0);
-                }
-            }
-        }, null);
-    }
+	/**
+	 * Performs a proper Paper 1.21.11 villager restock.
+	 *
+	 * Villager#restock():
+	 * - updates offer demand
+	 * - fires VillagerReplenishTradeEvent
+	 * - resets eligible offer uses
+	 *
+	 * This replaces the old implementation which manually set recipe uses
+	 * to zero and skipped vanilla/Paper demand handling.
+	 */
+	public void restock() {
+		VillagerOptimizer.scheduling()
+				.entitySpecificScheduler(villager)
+				.run(villager::restock, null);
+	}
 
-    /**
-     * @return The level between 1-5 calculated from the villagers experience.
-     */
-    public int calculateLevel() {
-        // https://minecraft.fandom.com/wiki/Trading#Mechanics
-        int vilEXP = villager.getVillagerExperience();
-        if (vilEXP >= 250) return 5;
-        if (vilEXP >= 150) return 4;
-        if (vilEXP >= 70) return 3;
-        if (vilEXP >= 10) return 2;
-        return 1;
-    }
+	/**
+	 * Re-applies the runtime portion of an already-persisted optimization.
+	 *
+	 * CRITICAL SAFETY PROPERTY:
+	 *
+	 * This method can only disable awareness when BubbleVillagers' own PDC
+	 * marker already exists.
+	 *
+	 * It NEVER:
+	 * - creates an optimization marker
+	 * - optimizes an unmarked villager
+	 * - enables AI
+	 * - enables awareness
+	 *
+	 * Therefore it is safe to use when a villager/chunk loads.
+	 */
+	public void reconcileOptimizedState() {
+		VillagerOptimizer.scheduling()
+				.entitySpecificScheduler(villager)
+				.run(() -> {
+					if (!bubbleData.isOptimized()) {
+						return;
+					}
 
-    /**
-     * @return true if the villager can lose its acquired profession by having its workstation destroyed.
-     */
-    public boolean canLooseProfession() {
-        // A villager with a level of 1 and no trading experience is liable to lose its profession.
-        return villager.getVillagerLevel() <= 1 && villager.getVillagerExperience() <= 0;
-    }
+					if (villager.isAware()) {
+						villager.setAware(false);
+					}
+				}, null);
+	}
 
-    public void sayNo() {
-        try {
-            villager.shakeHead();
-        } catch (NoSuchMethodError e) {
-            villager.getWorld().playSound(villager.getEyeLocation(), Sound.ENTITY_VILLAGER_NO, 1.0F, 1.0F);
-        }
-    }
+	/**
+	 * @return level 1-5 calculated from stored villager trading experience.
+	 */
+	public int calculateLevel() {
+		int villagerExperience = villager.getVillagerExperience();
 
-    public @Nullable Location getJobSite() {
-        return villager.getMemory(MemoryKey.JOB_SITE);
-    }
+		if (villagerExperience >= 250) return 5;
+		if (villagerExperience >= 150) return 4;
+		if (villagerExperience >= 70) return 3;
+		if (villagerExperience >= 10) return 2;
 
-    @Override
-    public Keyring.Space getSpace() {
-        return Keyring.Space.VillagerOptimizer;
-    }
+		return 1;
+	}
 
-    @Override
-    public boolean isOptimized() {
-        for (PDCWrapper pdcWrapper : pdcWrappers) {
-            if (pdcWrapper.isOptimized()) {
-                return true;
-            }
-        }
-        return false;
-    }
+	/**
+	 * @return true if this villager can still lose its profession after its
+	 * workstation is removed.
+	 *
+	 * Method name retained for source compatibility with existing callers.
+	 */
+	public boolean canLooseProfession() {
+		return villager.getVillagerLevel() <= 1
+				&& villager.getVillagerExperience() <= 0;
+	}
 
-    @Override
-    public boolean canOptimize(long cooldown_millis) {
-        for (PDCWrapper pdcWrapper : pdcWrappers) {
-            if (!pdcWrapper.canOptimize(cooldown_millis)) {
-                return false;
-            }
-        }
-        return true;
-    }
+	public void sayNo() {
+		try {
+			villager.shakeHead();
+		} catch (NoSuchMethodError e) {
+			villager.getWorld().playSound(
+					villager.getEyeLocation(),
+					Sound.ENTITY_VILLAGER_NO,
+					1.0F,
+					1.0F
+			);
+		}
+	}
 
-    @Override
-    public void setOptimizationType(OptimizationType type) {
-        for (PDCWrapper pdcWrapper : pdcWrappers) {
-            pdcWrapper.setOptimizationType(type);
-        }
-    }
+	public @Nullable Location getJobSite() {
+		return villager.getMemory(MemoryKey.JOB_SITE);
+	}
 
-    @Override
-    public @NotNull OptimizationType getOptimizationType() {
-        OptimizationType result = OptimizationType.NONE;
-        for (PDCWrapper pdcWrapper : pdcWrappers) {
-            OptimizationType type = pdcWrapper.getOptimizationType();
-            if (type != OptimizationType.NONE) {
-                if (pdcWrapper.getSpace() == Keyring.Space.VillagerOptimizer) {
-                    return type;
-                } else {
-                    result = type;
-                }
-            }
-        }
-        return result;
-    }
+	@Override
+	public Keyring.Space getSpace() {
+		return Keyring.Space.VillagerOptimizer;
+	}
 
-    @Override
-    public void saveOptimizeTime() {
-        for (PDCWrapper pdcWrapper : pdcWrappers) {
-            pdcWrapper.saveOptimizeTime();
-        }
-    }
+	/**
+	 * Only BubbleVillagers' own marker determines Bubble optimization.
+	 *
+	 * We intentionally no longer allow legacy AntiVillagerLag markers to
+	 * cause a villager to be considered Bubble-optimized.
+	 */
+	@Override
+	public boolean isOptimized() {
+		return bubbleData.isOptimized();
+	}
 
-    @Override
-    public long getOptimizeCooldownMillis(long cooldown_millis) {
-        long cooldown = 0L;
-        for (PDCWrapper pdcWrapper : pdcWrappers) {
-            cooldown = Math.max(cooldown, pdcWrapper.getOptimizeCooldownMillis(cooldown_millis));
-        }
-        return cooldown;
-    }
+	@Override
+	public boolean canOptimize(long cooldown_millis) {
+		return bubbleData.canOptimize(cooldown_millis);
+	}
 
-    @Override
-    public long getLastRestockFullTime() {
-        long cooldown = 0L;
-        for (PDCWrapper pdcWrapper : pdcWrappers) {
-            cooldown = Math.max(cooldown, pdcWrapper.getLastRestockFullTime());
-        }
-        return cooldown;
-    }
+	@Override
+	public void setOptimizationType(@NotNull OptimizationType type) {
+		bubbleData.setOptimizationType(type);
+	}
 
-    @Override
-    public void saveRestockTime() {
-        for (PDCWrapper pdcWrapper : pdcWrappers) {
-            pdcWrapper.saveRestockTime();
-        }
-    }
+	@Override
+	public @NotNull OptimizationType getOptimizationType() {
+		return bubbleData.getOptimizationType();
+	}
 
-    @Override
-    public boolean canLevelUp(long cooldown_millis) {
-        for (PDCWrapper pdcWrapper : pdcWrappers) {
-            if (!pdcWrapper.canLevelUp(cooldown_millis)) {
-                return false;
-            }
-        }
-        return true;
-    }
+	@Override
+	public void saveOptimizeTime() {
+		bubbleData.saveOptimizeTime();
+	}
 
-    @Override
-    public void saveLastLevelUp() {
-        for (PDCWrapper pdcWrapper : pdcWrappers) {
-            pdcWrapper.saveLastLevelUp();
-        }
-    }
+	@Override
+	public long getOptimizeCooldownMillis(long cooldown_millis) {
+		return bubbleData.getOptimizeCooldownMillis(cooldown_millis);
+	}
 
-    @Override
-    public long getLevelCooldownMillis(long cooldown_millis) {
-        long cooldown = cooldown_millis;
-        for (PDCWrapper pdcWrapper : pdcWrappers) {
-            cooldown = Math.max(cooldown, pdcWrapper.getLevelCooldownMillis(cooldown_millis));
-        }
-        return cooldown;
-    }
+	@Override
+	public long getLastRestockFullTime() {
+		return bubbleData.getLastRestockFullTime();
+	}
+
+	@Override
+	public void saveRestockTime() {
+		bubbleData.saveRestockTime();
+	}
+
+	@Override
+	public boolean canLevelUp(long cooldown_millis) {
+		return bubbleData.canLevelUp(cooldown_millis);
+	}
+
+	@Override
+	public void saveLastLevelUp() {
+		bubbleData.saveLastLevelUp();
+	}
+
+	@Override
+	public long getLevelCooldownMillis(long cooldown_millis) {
+		return bubbleData.getLevelCooldownMillis(cooldown_millis);
+	}
 }

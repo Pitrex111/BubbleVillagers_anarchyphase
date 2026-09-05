@@ -5,7 +5,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import me.xginko.villageroptimizer.commands.VillagerOptimizerCommand;
 import me.xginko.villageroptimizer.config.Config;
 import me.xginko.villageroptimizer.config.LanguageCache;
-import me.xginko.villageroptimizer.events.OptimizedVillagerGlowCleanupListener;
 import me.xginko.villageroptimizer.struct.enums.Permissions;
 import me.xginko.villageroptimizer.modules.VillagerOptimizerModule;
 import me.xginko.villageroptimizer.utils.Util;
@@ -56,7 +55,6 @@ public class VillagerOptimizer extends JavaPlugin {
     private static ComponentLogger logger;
     private static Metrics bStats;
 
-    private OptimizedVillagerGlowCleanupListener optimizedVillagerGlowCleanupListener;
 
     @Override
     public void onLoad() {
@@ -147,10 +145,6 @@ public class VillagerOptimizer extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if (optimizedVillagerGlowCleanupListener != null) {
-            HandlerList.unregisterAll(optimizedVillagerGlowCleanupListener);
-            optimizedVillagerGlowCleanupListener = null;
-        }
         VillagerOptimizerModule.ENABLED_MODULES.forEach(VillagerOptimizerModule::disable);
         VillagerOptimizerModule.ENABLED_MODULES.clear();
         VillagerOptimizerCommand.COMMANDS.forEach(VillagerOptimizerCommand::disable);
@@ -231,30 +225,14 @@ public class VillagerOptimizer extends JavaPlugin {
             wrapperCache = Caffeine.newBuilder().expireAfterWrite(config.cache_keep_time).build();
             VillagerOptimizerCommand.reloadCommands();
             VillagerOptimizerModule.reloadModules();
-            syncOptimizedVillagerGlowCleanup();
+
             config.saveConfig();
         } catch (Exception exception) {
             logger.error("Error during config reload!", exception);
         }
     }
 
-    private void syncOptimizedVillagerGlowCleanup() {
-        final boolean outlineEnabled = config.getBoolean("gameplay.outline-optimized-villagers.enable", false);
-        if (outlineEnabled) {
-            if (optimizedVillagerGlowCleanupListener != null) {
-                HandlerList.unregisterAll(optimizedVillagerGlowCleanupListener);
-                optimizedVillagerGlowCleanupListener = null;
-            }
-            return;
-        }
 
-        if (optimizedVillagerGlowCleanupListener == null) {
-            optimizedVillagerGlowCleanupListener = new OptimizedVillagerGlowCleanupListener(this);
-            getServer().getPluginManager().registerEvents(optimizedVillagerGlowCleanupListener, this);
-        }
-
-        optimizedVillagerGlowCleanupListener.cleanupLoadedChunks();
-    }
 
     private void reloadLang(boolean logFancy) {
         try {

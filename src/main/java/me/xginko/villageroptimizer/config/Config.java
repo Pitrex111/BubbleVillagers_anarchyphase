@@ -89,6 +89,15 @@ public class Config {
         config.addDefault("gameplay.outline-optimized-villagers.enable", false);
         config.addDefault("gameplay.prevent-entities-from-targeting-optimized.enable", true);
         config.addDefault("gameplay.prevent-damage-to-optimized.enable", true);
+		config.addDefault(
+				"optimization-methods.auto-optimize-on-adult.enable",
+				true
+		);
+
+		config.addDefault(
+				"optimization-methods.auto-optimize-on-adult.check-period-ticks",
+				200
+		);
         
         config.options().copyDefaults(true);
         saveConfig();

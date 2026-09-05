@@ -63,10 +63,10 @@ public class OptimizeByWorkstation extends VillagerOptimizerModule implements Li
         HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public boolean shouldEnable() {
-        return config.getBoolean(configPath + ".enable", false);
-    }
+	@Override
+	public boolean shouldEnable() {
+		return false;
+	}
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     private void onBlockPlace(BlockPlaceEvent event) {

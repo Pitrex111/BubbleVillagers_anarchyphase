@@ -37,10 +37,10 @@ public class VisuallyHighlightOptimized extends VillagerOptimizerModule implemen
         HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public boolean shouldEnable() {
-        return config.getBoolean("gameplay.outline-optimized-villagers.enable", false);
-    }
+	@Override
+	public boolean shouldEnable() {
+		return false;
+	}
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     private void onOptimize(VillagerOptimizeEvent event) {

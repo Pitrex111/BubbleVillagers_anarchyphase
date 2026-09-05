@@ -84,10 +84,10 @@ public class OptimizeByBlock extends VillagerOptimizerModule implements Listener
         HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public boolean shouldEnable() {
-        return config.getBoolean(configPath + ".enable", false);
-    }
+	@Override
+	public boolean shouldEnable() {
+		return false;
+	}
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     private void onBlockPlace(BlockPlaceEvent event) {

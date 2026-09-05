@@ -15,115 +15,286 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.inventory.EquipmentSlot;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
-import java.util.SortedSet;
+import java.util.NavigableSet;
 import java.util.TreeSet;
 
-public class RestockOptimizedTrades extends VillagerOptimizerModule implements Listener {
+public class RestockOptimizedTrades
+		extends VillagerOptimizerModule
+		implements Listener {
 
-    private final SortedSet<Long> restockDayTimes;
-    private final boolean log_enabled, notify_player;
+	private final NavigableSet<Long> restockDayTimes =
+			new TreeSet<>();
 
-    public RestockOptimizedTrades() {
-        super("gameplay.restock-optimized-trades");
-        this.restockDayTimes = new TreeSet<>(Comparator.reverseOrder());
+	private final boolean logEnabled;
+	private final boolean notifyPlayer;
 
-        final List<Long> defaults = Arrays.asList(1000L, 13000L);
-        final List<?> rawRestockTimes = config.master().getList(configPath + ".restock-times", new ArrayList<>(defaults));
-        for (Object raw : rawRestockTimes) {
-            if (raw instanceof Number number) {
-                restockDayTimes.add(number.longValue());
-                continue;
-            }
+	public RestockOptimizedTrades() {
+		super("gameplay.restock-optimized-trades");
 
-            if (raw instanceof String str) {
-                try {
-                    restockDayTimes.add(Long.parseLong(str));
-                } catch (NumberFormatException ignored) {
-                    // ignore invalid config values
-                }
-            }
-        }
+		List<Long> defaults =
+				List.of(
+						1000L,
+						13000L
+				);
 
-        if (restockDayTimes.isEmpty()) {
-            restockDayTimes.addAll(defaults);
-        }
+		List<?> rawRestockTimes =
+				config.master().getList(
+						configPath + ".restock-times",
+						new ArrayList<>(defaults)
+				);
 
-        config.master().addDefault(configPath + ".restock-times", new ArrayList<>(defaults));
-        this.notify_player = config.getBoolean(configPath + ".notify-player", true,
-                "Sends the player a message when the trades were restocked on a clicked villager.");
-        this.log_enabled = config.getBoolean(configPath + ".log", false);
-    }
+		for (Object raw : rawRestockTimes) {
 
-    @Override
-    public void enable() {
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-    }
+			Long parsed =
+					parseRestockTime(raw);
 
-    @Override
-    public void disable() {
-        HandlerList.unregisterAll(this);
-    }
+			if (parsed == null) {
+				continue;
+			}
 
-    @Override
-    public boolean shouldEnable() {
-        return true;
-    }
+			if (parsed < 0L || parsed >= 24000L) {
+				warn(
+						"Ignoring invalid restock time "
+								+ parsed
+								+ ". Valid values are 0-23999."
+				);
+				continue;
+			}
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    private void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
-        if (event.getRightClicked().getType() != XEntityType.VILLAGER.get()) return;
+			restockDayTimes.add(parsed);
+		}
 
-        WrappedVillager wrapped = wrapperCache.get((Villager) event.getRightClicked(), WrappedVillager::new);
-        if (!wrapped.isOptimized()) return;
+		if (restockDayTimes.isEmpty()) {
+			restockDayTimes.addAll(defaults);
+		}
 
-        if (event.getPlayer().hasPermission(Permissions.Bypass.RESTOCK_COOLDOWN.get())) {
-            wrapped.restock();
-            return;
-        }
+		config.master().addDefault(
+				configPath + ".restock-times",
+				new ArrayList<>(defaults)
+		);
 
-        long lastRestockFullTimeTicks = wrapped.getLastRestockFullTime();
-        long currentFullTimeTicks = wrapped.currentFullTimeTicks();
-        long currentDayTimeTicks = wrapped.currentDayTimeTicks();
+		this.notifyPlayer = config.getBoolean(
+				configPath + ".notify-player",
+				true,
+				"Sends action-bar feedback when trades are restocked."
+		);
 
-        long currentDay = currentFullTimeTicks - currentDayTimeTicks;
-        long ticksTillRestock = (24000 + currentDay + restockDayTimes.first()) - currentFullTimeTicks;
+		this.logEnabled = config.getBoolean(
+				configPath + ".log",
+				false
+		);
+	}
 
-        boolean restocked = false;
+	@Override
+	public void enable() {
+		plugin.getServer()
+				.getPluginManager()
+				.registerEvents(this, plugin);
+	}
 
-        for (Long restockDayTime : restockDayTimes) {
-            long restockTimeToday = currentDay + restockDayTime;
+	@Override
+	public void disable() {
+		HandlerList.unregisterAll(this);
+	}
 
-            if (currentFullTimeTicks < restockTimeToday || lastRestockFullTimeTicks >= restockTimeToday) {
-                ticksTillRestock = Math.min(ticksTillRestock, restockTimeToday - currentFullTimeTicks);
-                continue;
-            }
+	@Override
+	public boolean shouldEnable() {
+		return true;
+	}
 
-            if (!restocked) {
-                wrapped.restock();
-                wrapped.saveRestockTime();
-                restocked = true;
-            }
-        }
+	@EventHandler(
+			priority = EventPriority.HIGHEST,
+			ignoreCancelled = true
+	)
+	private void onPlayerInteractEntity(
+			PlayerInteractEntityEvent event
+	) {
 
-        if (!restocked) return;
+		if (event.getHand() != EquipmentSlot.HAND) {
+			return;
+		}
 
-        if (notify_player) {
-            final TextReplacementConfig timeLeft = TextReplacementConfig.builder()
-                    .matchLiteral("%time%")
-                    .replacement(Util.formatDuration(Duration.ofMillis(ticksTillRestock * 50L)))
-                    .build();
-            VillagerOptimizer.getLang(event.getPlayer().locale()).trades_restocked
-                    .forEach(line -> KyoriUtil.sendMessage(event.getPlayer(), line.replaceText(timeLeft)));
-        }
+		if (event.getRightClicked().getType()
+				!= XEntityType.VILLAGER.get()) {
+			return;
+		}
 
-        if (log_enabled) {
-            info("Restocked optimized villager at " + LocationUtil.toString(wrapped.villager.getLocation()));
-        }
-    }
+		Villager villager =
+				(Villager) event.getRightClicked();
+
+		WrappedVillager wrapped =
+				wrapperCache.get(
+						villager,
+						WrappedVillager::new
+				);
+
+		if (!wrapped.isOptimized()) {
+			return;
+		}
+
+		if (event.getPlayer().hasPermission(
+				Permissions.Bypass
+						.RESTOCK_COOLDOWN
+						.get()
+		)) {
+
+			villager.restock();
+			wrapped.saveRestockTime();
+
+			if (logEnabled) {
+				info(
+						"Force-restocked optimized villager at "
+								+ LocationUtil.toString(
+								villager.getLocation()
+						)
+				);
+			}
+
+			return;
+		}
+
+		long currentFullTime =
+				wrapped.currentFullTimeTicks();
+
+		long currentDayTime =
+				wrapped.currentDayTimeTicks();
+
+		long lastRestockFullTime =
+				wrapped.getLastRestockFullTime();
+
+		long currentDayStart =
+				currentFullTime - currentDayTime;
+
+		if (!hasUnconsumedRestockWindow(
+				currentDayStart,
+				currentFullTime,
+				lastRestockFullTime
+		)) {
+			return;
+		}
+
+		villager.restock();
+		wrapped.saveRestockTime();
+
+		long ticksUntilNext =
+				ticksUntilNextRestock(
+						currentDayTime
+				);
+
+		if (notifyPlayer) {
+
+			TextReplacementConfig timeLeft =
+					TextReplacementConfig.builder()
+							.matchLiteral("%time%")
+							.replacement(
+									Util.formatDuration(
+											Duration.ofMillis(
+													ticksUntilNext
+															* 50L
+											)
+									)
+							)
+							.build();
+
+			KyoriUtil.sendActionBar(
+					event.getPlayer(),
+					VillagerOptimizer
+							.getLang(
+									event.getPlayer()
+											.locale()
+							)
+							.trades_restocked
+							.stream()
+							.map(line ->
+									line.replaceText(
+											timeLeft
+									)
+							)
+							.toList()
+			);
+		}
+
+		if (logEnabled) {
+			info(
+					"Restocked optimized villager at "
+							+ LocationUtil.toString(
+							villager.getLocation()
+					)
+			);
+		}
+	}
+
+	private boolean hasUnconsumedRestockWindow(
+			long currentDayStart,
+			long currentFullTime,
+			long lastRestockFullTime
+	) {
+
+		for (long restockDayTime
+				: restockDayTimes) {
+
+			long absoluteRestockTime =
+					currentDayStart
+							+ restockDayTime;
+
+			if (absoluteRestockTime
+					> currentFullTime) {
+				break;
+			}
+
+			if (lastRestockFullTime
+					< absoluteRestockTime) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private long ticksUntilNextRestock(
+			long currentDayTime
+	) {
+
+		Long nextToday =
+				restockDayTimes.higher(
+						currentDayTime
+				);
+
+		if (nextToday != null) {
+			return Math.max(
+					0L,
+					nextToday - currentDayTime
+			);
+		}
+
+		return Math.max(
+				0L,
+				(24000L - currentDayTime)
+						+ restockDayTimes.first()
+		);
+	}
+
+	private Long parseRestockTime(
+			Object raw
+	) {
+
+		if (raw instanceof Number number) {
+			return number.longValue();
+		}
+
+		if (raw instanceof String string) {
+			try {
+				return Long.parseLong(string);
+			} catch (NumberFormatException ignored) {
+				return null;
+			}
+		}
+
+		return null;
+	}
 }

@@ -1,6 +1,5 @@
 package me.xginko.villageroptimizer.modules.gameplay;
 
-import com.cryptomorin.xseries.XPotion;
 import me.xginko.villageroptimizer.VillagerOptimizer;
 import me.xginko.villageroptimizer.config.Config;
 import me.xginko.villageroptimizer.modules.VillagerOptimizerModule;
@@ -16,77 +15,211 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.potion.PotionEffect;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-public class LevelOptimizedProfession extends VillagerOptimizerModule implements Listener {
+public class LevelOptimizedProfession
+		extends VillagerOptimizerModule
+		implements Listener {
 
-    private static final PotionEffect SUPER_SLOWNESS = new PotionEffect(
-            XPotion.SLOWNESS.getPotionEffectType(), 120, 120, false, false);
+	private final boolean notifyPlayer;
+	private final long cooldownMillis;
 
-    private final boolean notify_player;
-    private final long cooldown_millis;
+	public LevelOptimizedProfession() {
+		super("gameplay.level-optimized-profession");
 
-    public LevelOptimizedProfession() {
-        super("gameplay.level-optimized-profession");
-        Config config = VillagerOptimizer.config();
-        this.cooldown_millis = TimeUnit.SECONDS.toMillis(
-                config.getInt(configPath + ".level-check-cooldown-seconds", 5,
-                "Cooldown in seconds until the level of a villager will be checked and updated again.\n" +
-                "Recommended to leave as is."));
-        this.notify_player = config.getBoolean(configPath + ".notify-player", true,
-                "Tell players to wait when a villager is leveling up.");
-    }
+		Config config =
+				VillagerOptimizer.config();
 
-    @Override
-    public void enable() {
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-    }
+		this.cooldownMillis =
+				TimeUnit.SECONDS.toMillis(
+						Math.max(
+								0,
+								config.getInt(
+										configPath
+												+ ".level-check-cooldown-seconds",
+										5,
+										"Cooldown in seconds until the level of an optimized villager is checked again."
+								)
+						)
+				);
 
-    @Override
-    public void disable() {
-        HandlerList.unregisterAll(this);
-    }
+		this.notifyPlayer =
+				config.getBoolean(
+						configPath
+								+ ".notify-player",
+						true,
+						"Show action-bar feedback when the villager level update is on cooldown."
+				);
+	}
 
-    @Override
-    public boolean shouldEnable() {
-        return true;
-    }
+	@Override
+	public void enable() {
+		plugin.getServer()
+				.getPluginManager()
+				.registerEvents(this, plugin);
+	}
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    private void onTradeScreenClose(InventoryCloseEvent event) {
-        if (
-                event.getInventory().getType() == InventoryType.MERCHANT
-                && event.getInventory().getHolder() instanceof Villager
-        ) {
-            final Villager villager = (Villager) event.getInventory().getHolder();
-            final WrappedVillager wVillager = wrapperCache.get(villager, WrappedVillager::new);
-            if (!wVillager.isOptimized()) return;
+	@Override
+	public void disable() {
+		HandlerList.unregisterAll(this);
+	}
 
-            if (wVillager.canLevelUp(cooldown_millis)) {
-                if (wVillager.calculateLevel() <= villager.getVillagerLevel()) return;
+	@Override
+	public boolean shouldEnable() {
+		return true;
+	}
 
-                scheduling.entitySpecificScheduler(villager).run(enableAI -> {
-                    villager.addPotionEffect(SUPER_SLOWNESS);
-                    villager.setAware(true);
-                    scheduling.entitySpecificScheduler(villager).runDelayed(disableAI -> {
-                        villager.setAware(false);
-                        wVillager.saveLastLevelUp();
-                    }, null, 100L);
-                }, null);
-            } else {
-                if (notify_player) {
-                    Player player = (Player) event.getPlayer();
-                    final TextReplacementConfig timeLeft = TextReplacementConfig.builder()
-                            .matchLiteral("%time%")
-                            .replacement(Util.formatDuration(Duration.ofMillis(wVillager.getLevelCooldownMillis(cooldown_millis))))
-                            .build();
-                    VillagerOptimizer.getLang(player.locale()).villager_leveling_up
-                            .forEach(line -> KyoriUtil.sendMessage(player, line.replaceText(timeLeft)));
-                }
-            }
-        }
-    }
+	@EventHandler(
+			priority = EventPriority.MONITOR,
+			ignoreCancelled = true
+	)
+	private void onTradeScreenClose(
+			InventoryCloseEvent event
+	) {
+
+		if (event.getInventory().getType()
+				!= InventoryType.MERCHANT) {
+			return;
+		}
+
+		if (!(event.getInventory()
+				.getHolder()
+				instanceof Villager villager)) {
+			return;
+		}
+
+		Player player =
+				event.getPlayer()
+						instanceof Player
+						? (Player) event.getPlayer()
+						: null;
+
+		scheduling.entitySpecificScheduler(
+				villager
+		).run(() -> {
+
+			WrappedVillager wrapped =
+					wrapperCache.get(
+							villager,
+							WrappedVillager::new
+					);
+
+			if (!wrapped.isOptimized()) {
+				return;
+			}
+
+			int currentLevel =
+					villager.getVillagerLevel();
+
+			int targetLevel =
+					wrapped.calculateLevel();
+
+			if (targetLevel <= currentLevel) {
+				return;
+			}
+
+			if (!wrapped.canLevelUp(
+					cooldownMillis
+			)) {
+
+				if (notifyPlayer
+						&& player != null) {
+
+					long remainingMillis =
+							wrapped.getLevelCooldownMillis(
+									cooldownMillis
+							);
+
+					notifyCooldown(
+							player,
+							remainingMillis
+					);
+				}
+
+				return;
+			}
+
+			int levelsToIncrease =
+					targetLevel - currentLevel;
+
+			try {
+
+				villager.increaseLevel(
+						levelsToIncrease
+				);
+
+				wrapped.saveLastLevelUp();
+
+			} catch (
+					IllegalArgumentException exception
+			) {
+
+				error(
+						"Failed to increase optimized villager from level "
+								+ currentLevel
+								+ " to "
+								+ targetLevel,
+						exception
+				);
+
+				return;
+			}
+
+			/*
+			 * Never allow the leveling process to wake an optimized
+			 * BubbleVillagers villager.
+			 */
+			if (wrapped.isOptimized()
+					&& villager.isAware()) {
+				villager.setAware(false);
+			}
+
+		}, null);
+	}
+
+	private void notifyCooldown(
+			Player player,
+			long remainingMillis
+	) {
+
+		TextReplacementConfig timeLeft =
+				TextReplacementConfig.builder()
+						.matchLiteral("%time%")
+						.replacement(
+								Util.formatDuration(
+										Duration.ofMillis(
+												Math.max(
+														0L,
+														remainingMillis
+												)
+										)
+								)
+						)
+						.build();
+
+		scheduling.entitySpecificScheduler(
+				player
+		).run(() ->
+
+						KyoriUtil.sendActionBar(
+								player,
+								VillagerOptimizer
+										.getLang(
+												player.locale()
+										)
+										.villager_leveling_up
+										.stream()
+										.map(line ->
+												line.replaceText(
+														timeLeft
+												)
+										)
+										.toList()
+						),
+
+				null
+		);
+	}
 }
